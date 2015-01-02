@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"strconv"
@@ -11,6 +12,30 @@ import (
 )
 
 var reserved = map[string]int{}
+
+func saveCurrentCounter(counter int) {
+	converted := strconv.Itoa(counter)
+	if err := ioutil.WriteFile(".counter", []byte(converted), 0777); err != nil {
+		panic(err)
+	}
+}
+
+func loadCurrentCounter() int {
+	counter := 0
+	if _, err := os.Stat(".counter"); err == nil {
+		fmt.Println("Loading saved counter from '.counter'...")
+		contents, err := ioutil.ReadFile(".counter")
+		if err != nil {
+			panic(err)
+		}
+		counter, err = strconv.Atoi(string(contents))
+		if err != nil {
+			return 0
+		}
+	}
+
+	return counter
+}
 
 func loadReserved(filename string) map[string]int {
 	file, err := os.Open(filename)
@@ -51,7 +76,7 @@ func checkIfReserved(value int, reservations map[string]int) bool {
 }
 
 func main() {
-	var counter int = 0
+	var counter int = loadCurrentCounter()
 
 	portPtr := flag.Int("port", 19229, "Bind to specified UDP port.")
 	addrPtr := flag.String("bind", "127.0.0.1", "Address to bind on.")
@@ -103,6 +128,7 @@ func main() {
 					counter += 1
 				}
 				assigned = counter
+				saveCurrentCounter(assigned)
 			}
 		}
 
